@@ -10,38 +10,6 @@ First, download the glove dataset that we'll use for this.
 ```
 $ wget https://nlp.stanford.edu/data/wordvecs/glove.2024.wikigiga.50d.zip
 $ unzip glove.2024.wikigiga.50d.zip wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt
-
-```
-
-Converting the Glove dataset into jsonl is simple enough. Create the local file ```glove_to_jsonl.py``` with the following content
-
-```
-import sys
-import string
-import json
-
-d = 50
-n = 1_000_000
-allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase)
-for i, line in enumerate(sys.stdin):
-    try:
-        parts = line.strip().split()
-        word = parts[0]
-        if not set(word).issubset(allowed_chars):
-            continue
-        values = [round(float(_),3) for _ in parts[-d:]]
-        json_line = json.dumps( {"id":word, "values":values} )
-        sys.stdout.write(f'{json_line}\n')
-        if i >= n:
-            break
-    except:
-        #sys.stderr.write(line)
-        pass
-```
-
-And pipe the txt data file into your script.
-
-```
 $ cat wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt | python glove_to_jsonl.py | gzip > word-embeddings.jsonl.gz
 ```
 
