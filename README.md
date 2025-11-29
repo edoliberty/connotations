@@ -3,6 +3,28 @@
 
 We will build a little game that, given a word in English, prints out some associations for that word. This is more of a fun way to learn about Pinecone's CLI than an actual game...
 
+if you don't yet have the Pinecone CLI, shame on you...
+
+```
+brew tap pinecone-io/tap
+brew install pinecone-io/tap/pinecone
+```
+
+This requires the 0.2.0 version of the CLI, upgrade with
+
+```
+brew tap pinecone-io/tap
+brew reinstall pinecone-io/tap/pinecone
+```
+
+## Just play
+
+These scripts contain the same code as bellow
+```
+source create.sh
+source play.sh
+```
+
 ## Data prep
 
 First, download the glove dataset that we'll use for this.
@@ -39,7 +61,7 @@ $ pc index create --name word-embeddings -d 50 -m cosine --cloud "aws" --region 
 Upsert the data into your new index
 
 ```
-$ cat word-embeddings.jsonl.gz | gunzip | pc index vector upsert --index-name word-embeddings --namespace words --timeout 30m --body -
+$ cat word-embeddings.jsonl.gz | gunzip | pc index vector upsert --index-name word-embeddings  --timeout 30m --body -
 ```
 
 Note that we see ```--timeout 30m``` to give the client enough time to upload the 1,000,000 records.
@@ -49,7 +71,7 @@ Note that we see ```--timeout 30m``` to give the client enough time to upload th
 We are now ready to play the connotations game!
 
 ```
-$ pc index vector query --index-name word-embeddings --namespace words --id "coconut" --top-k 10
+$ pc index vector query --index-name word-embeddings --id "coconut" --top-k 10
 
 Namespace: words
 Usage: 1 (read units)
