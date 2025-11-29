@@ -1,0 +1,1 @@
+pc index delete --name word-embeddings
