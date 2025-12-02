@@ -21,8 +21,8 @@ brew reinstall pinecone-io/tap/pinecone
 
 These scripts contain the same code as bellow
 ```
-source create.sh
-source play.sh
+$ source create.sh
+$ source play.sh
 ```
 
 ## Data prep
@@ -64,7 +64,7 @@ Upsert the data into your new index
 $ cat word-embeddings.jsonl.gz | gunzip | pc index vector upsert --index-name word-embeddings  --timeout 30m --body -
 ```
 
-Note that we see ```--timeout 30m``` to give the client enough time to upload the 1,000,000 records.
+Note that we set ```--timeout 30m``` to give the client enough time to upload the 1,000,000 records.
 
 ## Play the game
 
@@ -73,7 +73,7 @@ We are now ready to play the connotations game!
 ```
 $ pc index vector query --index-name word-embeddings --id "coconut" --top-k 10
 
-Namespace: words
+Namespace: __default__
 Usage: 1 (read units)
 ID           SCORE
 coconut      0.997997
