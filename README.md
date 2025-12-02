@@ -21,8 +21,8 @@ brew reinstall pinecone-io/tap/pinecone
 
 These scripts contain the same code as bellow
 ```
-$ source create.sh
-$ source play.sh
+$ ./create.sh
+$ ./play.sh
 ```
 
 ## Data prep
