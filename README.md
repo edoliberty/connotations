@@ -3,44 +3,36 @@
 
 We will build a little game that, given a word in English, prints out some associations for that word. This is more of a fun way to learn about Pinecone's CLI than an actual game...
 
+
+## Install the Pinecone CLI
 if you don't yet have the Pinecone CLI, shame on you...
 
-```
-brew tap pinecone-io/tap
-brew install pinecone-io/tap/pinecone
-```
-
-This requires the 0.2.0 version of the CLI, upgrade with
-
-```
-brew tap pinecone-io/tap
-brew reinstall pinecone-io/tap/pinecone
+```sh
+curl -fsSL https://pinecone.io/install.sh | sh
 ```
 
-## Just play
+## Get the repo
 
-These scripts contain the same code as bellow
-```
-$ ./create.sh
-$ ./play.sh
+You really need only the two python scripts, the rest are just bash commands in this readme.
+```sh
+git clone https://github.com/edoliberty/connotations.git
+cd connotations
 ```
 
 ## Data prep
 
-First, download the glove dataset that we'll use for this.
+First, download the glove dataset that we'll use for this. The download might take some time.
 
-```
-$ wget https://nlp.stanford.edu/data/wordvecs/glove.2024.wikigiga.50d.zip
-$ unzip glove.2024.wikigiga.50d.zip wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt
-$ cat wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt | python glove_to_jsonl.py | gzip > word-embeddings.jsonl.gz
+```sh
+wget -nc https://nlp.stanford.edu/data/wordvecs/glove.2024.wikigiga.50d.zip
+unzip glove.2024.wikigiga.50d.zip wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt
+cat wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt | python glove_to_jsonl.py | gzip > glove.jsonl.gz
 ```
 
-Now the file ```word-embeddings.jsonl.gz``` contains 1,000,000 word embeddings in dimension 50 in json. You can look at it like this:
-
-```
-$ cat word-embeddings.jsonl.gz | gunzip | head -n 2
-{"id": "the", "values": [-0.383, -0.481, -0.274, 0.133, 0.065, -0.092, -0.003, 0.169, 0.428, 0.032, 0.601, 0.005, 0.222, -0.107, 0.34, -0.248, -0.066, 0.165, -0.099, -0.267, -0.352, -0.596, -0.748, -0.262, -0.4, 0.306, 0.132, 0.15, -0.463, 0.436, -0.328, -0.112, -0.318, -0.586, -0.242, -0.383, -0.434, 5.955, 0.137, -0.065, 0.457, -0.019, 0.261, -0.294, 0.199, 0.278, 0.165, 0.406, -0.228, -0.4]}
-{"id": "of", "values": [0.081, 0.385, -0.479, -0.27, -0.266, 0.104, -0.102, -0.053, 0.138, -0.137, 1.009, -0.205, 0.21, 0.395, 0.45, -0.306, 0.219, 0.818, -0.343, -0.416, -0.734, -0.102, -0.512, -0.483, 0.477, 0.272, 0.482, 0.01, -0.313, 0.669, -0.353, -0.076, 0.423, -0.454, -0.458, 0.177, 0.421, 5.71, -0.298, -0.046, 0.155, -0.251, -0.061, 0.289, 0.193, 0.206, -0.306, 0.318, -0.081, -0.376]}
+Now the file `glove.jsonl.gz` contains word embeddings in dimension 50 in json. You can now delete the source files. They are no longer needed. 
+```sh
+rm glove.2024.wikigiga.50d.zip
+rm wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt
 ```
 
 
@@ -48,31 +40,47 @@ $ cat word-embeddings.jsonl.gz | gunzip | head -n 2
 
 Make sure your client is authenticated
 
-```
-$ pc auth login
+```sh
+pc login
 ```
 
 Create an index
 
-```
-$ pc index create --name word-embeddings -d 50 -m cosine --cloud "aws" --region "us-east-1"
+```sh
+pc index create --name glove -d 50 -m cosine --cloud "aws" --region "us-east-1"
 ```
 
+Check that your index is ready. Create is an async call, an index might take a minute to be ready.
+```sh
+pc index describe --name glove
+```
+
+If you are writing a script, it is convenient to use decribe like this
+```sh
+pc index describe --name glove --json | jq .status.ready
+```
+
+
+## Ingesting data
 Upsert the data into your new index
 
-```
-$ cat word-embeddings.jsonl.gz | gunzip | pc index vector upsert --index-name word-embeddings  --timeout 30m --body -
+```sh
+cat glove.jsonl.gz | gunzip | pc index vector upsert --index-name glove --timeout 30m --file -
 ```
 
-Note that we set ```--timeout 30m``` to give the client enough time to upload the 1,000,000 records.
+Note that we set ```--timeout 30m``` to give the client (more than) enough time to upload the 1,000,000 records.
 
-## Play the game
+
+## Searching for connotations
 
 We are now ready to play the connotations game!
+Since the `id` for each vector is the word itself, we can us the [search by record id](https://docs.pinecone.io/guides/search/semantic-search#search-with-a-record-id) to find similar words.
 
+```sh
+pc index vector query --index-name glove --id "coconut" --top-k 10
 ```
-$ pc index vector query --index-name word-embeddings --id "coconut" --top-k 10
 
+```text
 Namespace: __default__
 Usage: 1 (read units)
 ID           SCORE
@@ -87,3 +95,53 @@ dried        0.798168
 juice        0.790972
 lemon        0.788639
 ```
+
+## Searching for analogies
+
+Who has not seen the ["queen - king + man = woman"](https://www.technologyreview.com/2015/09/17/166211/king-man-woman-queen-the-marvelous-mathematics-of-computational-linguistics/) meme? It has become 
+the cliche example for what embeddings are and why they are interesting or useful. 
+
+While embeddings really are very interesting and useful, "semantic vector math" [doesn't work](https://mikexcohen.substack.com/p/king-man-woman-queen-is-fake-news) as-advertized in general. 
+The point of this demo isn't to pitch "queen - king + man = woman" but rather to learn how to use Pinecone's new and versatile CLI. 
+
+Here, just for fun, let's try to reproduce that...
+
+Let's start with fetching the embedding vectors for those words:
+```sh
+pc index vector fetch --index-name glove --ids '["queen","king","man"]' --json > vectors.json
+cat vectors.json | python vector_math.py '["queen","king","man"]' > query_vector.json
+cat query_vector.json | pc index vector query --index-name glove -v -
+```
+
+Which gives:
+```text
+Namespace: __default__
+Usage: 1 (read units)
+ID          SCORE
+woman       0.884853
+girl        0.876178
+man         0.836099
+boy         0.828002
+her         0.797578
+she         0.781111
+blonde      0.779127
+stranger    0.763405
+naked       0.760872
+herself     0.759408
+```
+
+Hurray!
+
+## Cleanup
+To delete your index use:
+```sh
+pc index delete --name glove
+```
+
+
+
+
+
+
+
+
