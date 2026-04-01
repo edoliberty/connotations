@@ -19,23 +19,6 @@ git clone https://github.com/edoliberty/connotations.git
 cd connotations
 ```
 
-## Data prep
-
-First, download the glove dataset that we'll use for this. The download might take some time.
-
-```sh
-wget -nc https://nlp.stanford.edu/data/wordvecs/glove.2024.wikigiga.50d.zip
-unzip glove.2024.wikigiga.50d.zip wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt
-cat wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt | python glove_to_jsonl.py | gzip > glove.jsonl.gz
-```
-
-Now the file `glove.jsonl.gz` contains word embeddings in dimension 50 in json. You can now delete the source files. They are no longer needed. 
-```sh
-rm glove.2024.wikigiga.50d.zip
-rm wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt
-```
-
-
 ## Creating your index
 
 Make sure your client is authenticated
@@ -44,7 +27,7 @@ Make sure your client is authenticated
 pc login
 ```
 
-Create an index
+Create an index for the [glove dataset](https://nlp.stanford.edu/projects/glove/)
 
 ```sh
 pc index create --name glove -d 50 -m cosine --cloud "aws" --region "us-east-1"
@@ -55,13 +38,24 @@ Check that your index is ready. Create is an async call, an index might take a m
 pc index describe --name glove
 ```
 
-If you are writing a script, it is convenient to use decribe like this
+
+## Ingesting data
+
+Download the glove dataset. This might take some time.
+
 ```sh
-pc index describe --name glove --json | jq .status.ready
+wget -nc https://nlp.stanford.edu/data/wordvecs/glove.2024.wikigiga.50d.zip
+unzip glove.2024.wikigiga.50d.zip wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt
+cat wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt | python glove_to_jsonl.py | gzip > glove.jsonl.gz
+```
+
+Now the file `glove.jsonl.gz` contains word embeddings in dimension 50 in jsonl. You can now delete the source files. They are no longer needed. 
+```sh
+rm glove.2024.wikigiga.50d.zip
+rm wiki_giga_2024_50_MFT20_vectors_seed_123_alpha_0.75_eta_0.075_combined.txt
 ```
 
 
-## Ingesting data
 Upsert the data into your new index
 
 ```sh
@@ -74,7 +68,7 @@ Note that we set ```--timeout 30m``` to give the client (more than) enough time 
 ## Searching for connotations
 
 We are now ready to play the connotations game!
-Since the `id` for each vector is the word itself, we can us the [search by record id](https://docs.pinecone.io/guides/search/semantic-search#search-with-a-record-id) to find similar words.
+Since the `id` for each vector is the word itself, we can use the [search by record id](https://docs.pinecone.io/guides/search/semantic-search#search-with-a-record-id) mechanism to find similar words.
 
 ```sh
 pc index vector query --index-name glove --id "coconut" --top-k 10
